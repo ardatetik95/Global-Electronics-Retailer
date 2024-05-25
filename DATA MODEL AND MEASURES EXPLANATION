@@ -1,0 +1,27 @@
+DATA MODEL EXPLANATION:
+--Sales, Stores, Customers and Products Tables were exported as CSV files from Global Electronics Retailer files
+
+--AVG Delivery Table is the product of a SQL Statement saved as a CSV table exported to Power BI
+
+--Seasons Table was created by extracting Month Name from Sales Table's Order Date column 
+and creating a Season column manually
+
+--Measures Table was created to hold the measures created with DAX for visualizations in the report
+DAX USED IN THIS REPORT
+REPORT PAGE 1
+--Total Revenue = SUMX(Sales,Sales[Quantity]*RELATED(Products[Unit Price USD]))
+
+--TotalOrderCount = DISTINCTCOUNT(Sales[Order Number])
+
+--TOTALCUSTOMER = DISTINCTCOUNT(Customers[CustomerKey])
+
+--Total Production Cost = SUMX(Sales,Sales[Quantity]*RELATED(Products[Unit Cost USD]))
+
+--Total Profit = [Total Revenue]-[Total Production Cost]
+
+REPORT PAGE 4
+--AOV = [Total Revenue] / [TotalOrderCount]
+
+--INSTORE AOV = [AOV] (FILTER(Stores,Stores[State]<>"Online"))
+
+--ONLINE AOV = [AOV] (FILTER(Stores,Stores[State]="Online"))
