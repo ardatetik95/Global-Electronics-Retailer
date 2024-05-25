@@ -1,0 +1,125 @@
+--What types of products does the company sell, and where are customers located? 
+--TOTAL REVENUE
+SELECT
+	SUM(P.Unit_Price_USD*S.Quantity) AS REVENUE
+FROM Sales S
+LEFT JOIN Products P ON S.ProductKey=P.ProductKey
+
+--TOTAL ORDER COUNT
+SELECT
+	COUNT(DISTINCT Order_Number) AS TOTAL_ORDER_COUNT
+FROM Sales
+
+--CUSTOMER COUNT
+SELECT
+	COUNT(DISTINCT CustomerKey) AS TOTAL_CUSTOMER_COUNT
+FROM Customers
+
+--TOTAL PROFIT
+SELECT
+	SUM(P.Unit_Price_USD*S.Quantity) - SUM(P.Unit_Cost_USD*S.Quantity) AS TOTAL_PROFIT
+FROM Sales S
+LEFT JOIN Products P ON S.ProductKey=P.ProductKey
+
+--CUSTOMER COUNT PER COUNTRY
+SELECT Country,
+	COUNT(DISTINCT CustomerKey) AS CUSTOMER_COUNT
+FROM Customers
+GROUP BY Country
+ORDER BY CUSTOMER_COUNT DESC
+
+--Are there any seasonal patterns or trends for order volume or revenue?
+--REVENUE BY MONTH
+SELECT
+	DATEPART(MONTH, S.Order_Date) AS MONTHNUM,
+	DATENAME(MONTH,S. Order_Date) AS NAME_MONTH,
+	SUM(P.Unit_Price_USD*S.Quantity) AS REVENUE
+FROM Sales S
+LEFT JOIN Products P ON S.ProductKey=P.ProductKey
+GROUP BY DATEPART(MONTH, S.Order_Date), DATENAME(MONTH,S. Order_Date)
+ORDER BY MONTHNUM
+
+--ORDER COUNT BY MONTH
+SELECT
+	DATEPART(MONTH, S.Order_Date) AS MONTHNUM,
+	DATENAME(MONTH,S. Order_Date) AS NAME_MONTH,
+	COUNT(DISTINCT S.Order_Number) AS ORDER_COUNT
+FROM Sales S
+LEFT JOIN Products P ON S.ProductKey=P.ProductKey
+GROUP BY DATEPART(MONTH, S.Order_Date), DATENAME(MONTH,S. Order_Date)
+ORDER BY MONTHNUM
+
+--REVENUE BY SEASONS
+WITH CTE_REVENUE AS (
+SELECT
+	CASE WHEN DATEPART(MONTH,(Order_Date)) IN ('12','1','2') THEN 'WINTER'
+	WHEN DATEPART(MONTH,(Order_Date)) IN ('3','4','5') THEN 'SPRING'
+	WHEN DATEPART(MONTH,(Order_Date)) IN ('6','7','8') THEN 'SUMMER'
+	WHEN DATEPART(MONTH,(Order_Date)) IN ('9','10','11') THEN 'AUTUMN'
+	END AS Seasons,
+	(P.Unit_Price_USD*S.Quantity) AS REVENUE
+FROM Sales S
+LEFT JOIN Products P ON S.ProductKey=P.ProductKey)
+
+SELECT 
+	Seasons,
+	SUM(REVENUE) AS SEASONAL_REVENUE
+FROM
+	CTE_REVENUE
+GROUP BY Seasons
+ORDER BY SEASONAL_REVENUE DESC
+
+--ORDER COUNT BY SEASONS
+WITH CTE_SEASONS AS (
+SELECT *, 
+	CASE WHEN DATEPART(MONTH,(Order_Date)) IN ('12','1','2') THEN 'WINTER'
+	WHEN DATEPART(MONTH,(Order_Date)) IN ('3','4','5') THEN 'SPRING'
+	WHEN DATEPART(MONTH,(Order_Date)) IN ('6','7','8') THEN 'SUMMER'
+	WHEN DATEPART(MONTH,(Order_Date)) IN ('9','10','11') THEN 'AUTUMN'
+	END AS Seasons
+FROM Sales)
+
+SELECT SE.Seasons,
+	COUNT(DISTINCT S.Order_Number) AS ORDER_COUNT
+FROM Sales S
+	LEFT JOIN Products P ON S.ProductKey=P.ProductKey
+	LEFT JOIN CTE_Seasons SE ON S.Order_Number=SE.Order_Number
+GROUP BY SE.Seasons
+ORDER BY ORDER_COUNT DESC
+
+--How long is the average delivery time in days? Has that changed over time?
+--AVG DELIVERY TIME IN MONTHS
+SELECT 
+	DATEPART(MONTH,Order_Date) AS MONTH_NUM,
+	DATENAME(MONTH,Order_Date) AS MONTH_NAME,
+	AVG(DATEDIFF(DAY,Order_Date,Delivery_Date)) AS AVG_DAYS
+FROM SALES
+WHERE Delivery_Date IS NOT NULL
+GROUP BY DATEPART(MONTH,Order_Date), DATENAME(MONTH,Order_Date)
+ORDER BY MONTH_NUM
+
+--AVG DELIVERY TIME IN YEARS
+SELECT 
+	DATEPART(YEAR,Order_Date) AS ORDER_YR,
+	AVG(DATEDIFF(DAY,Order_Date,Delivery_Date)) AS AVG_DAYS
+FROM SALES
+WHERE Delivery_Date IS NOT NULL
+GROUP BY DATEPART(YEAR,Order_Date)
+ORDER BY ORDER_YR ASC
+
+--Is there a difference in average order value (AOV) for online vs. in-store sales?
+--INSTORE AOV
+SELECT 
+	SUM(P.Unit_Price_USD*S.Quantity) / COUNT(DISTINCT S.Order_Number) AS IN_STORE_AOV
+FROM SALES S
+LEFT JOIN Stores ST ON S.StoreKey=ST.StoreKey
+LEFT JOIN Products P ON S.ProductKey=P.ProductKey
+WHERE ST.State NOT IN ('Online')
+
+--ONLINE AOV
+SELECT  
+	SUM(P.Unit_Price_USD*S.Quantity)/COUNT(DISTINCT S.Order_Number) AS ONLINE_AOV
+FROM SALES S
+LEFT JOIN Stores ST ON S.StoreKey=ST.StoreKey
+LEFT JOIN Products P ON S.ProductKey=P.ProductKey
+WHERE ST.State='Online'
